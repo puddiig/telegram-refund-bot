@@ -69,7 +69,7 @@ async def harga(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     harga = int(text)
     if harga not in [12000, 15000, 18000]:
-        await update.message.reply_text("Harga tidak valid.")
+        await update.message.reply_text("Harga tidak valid. Harap pilih 12000, 15000, atau 18000.")
         return HARGA
 
     user_data_store[update.effective_chat.id]["harga"] = harga
@@ -185,13 +185,17 @@ async def konfirmasi(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     refund = round(data["harga"] * sisa / data["durasi_hari"] * pengali)
 
-    sheet.append_row([
-        data["nama"], data["email"], data["password"],
-        data["tanggal_beli"], data["tanggal_backfree"],
-        data["durasi_hari"], sisa, pengali, refund,
-        data["e_wallet"], data["no_ewallet"],
-        datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-    ])
+    try:
+        sheet.append_row([
+            data["nama"], data["email"], data["password"],
+            data["tanggal_beli"], data["tanggal_backfree"],
+            data["durasi_hari"], sisa, pengali, refund,
+            data["e_wallet"], data["no_ewallet"],
+            datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+        ])
+    except Exception as e:
+        await update.message.reply_text(f"Terjadi kesalahan saat menyimpan data: {e}")
+        return ConversationHandler.END
 
     notif = f"""
 REFUND BARU DITERIMA:
