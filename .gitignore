@@ -1,13 +1,13 @@
-# Ignore credential files
+# File kredensial JSON (penting untuk menjaga kerahasiaan)
 olaa-refund-f5d486f2dc3a.json
 
-# Ignore Python cache files
+# Python bytecode files
 __pycache__/
 *.pyc
 
-# Ignore environment files
-.env
+# Menjaga agar folder atau file tertentu tidak ter-commit
+*.env
 
-# Ignore IDE files
-.vscode/
-.idea/
+# File yang berhubungan dengan sistem operasi (Windows atau macOS)
+.DS_Store
+Thumbs.db
