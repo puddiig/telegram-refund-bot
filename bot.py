@@ -4,12 +4,12 @@ from oauth2client.service_account import ServiceAccountCredentials
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
-    ConversationHandler, filters
+    ConversationHandler, ContextTypes, filters
 )
 from datetime import datetime
 from flask import Flask
-from keep_alive import keep_alive
 from threading import Thread
+import asyncio
 
 # Konfigurasi logging
 logging.basicConfig(level=logging.INFO)
@@ -20,12 +20,17 @@ SPREADSHEET_ID = '1tdPwCEKg_QqApq6nlyG5VjKqmJ8VKWOeH0rEfVoN7fg'
 ADMIN_ID = 8005266733  # Telegram Admin
 
 # Setup Google Sheets
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
+scope = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/drive"
+]
 creds = ServiceAccountCredentials.from_json_keyfile_name('olaa-refund-f5d486f2dc3a.json', scope)
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
-# Flask Server Setup
+# Setup Flask
 app = Flask(__name__)
 
 @app.route('/')
@@ -37,26 +42,26 @@ def home():
 
 user_data_store = {}
 
-async def start(update: Update, context):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Masukkan nama Anda:")
     return NAMA
 
-async def nama(update: Update, context):
+async def nama(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data_store[update.effective_chat.id] = {"nama": update.message.text}
     await update.message.reply_text("Masukkan email Anda:")
     return EMAIL
 
-async def email(update: Update, context):
+async def email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data_store[update.effective_chat.id]["email"] = update.message.text
     await update.message.reply_text("Masukkan password Anda:")
     return PASSWORD
 
-async def password(update: Update, context):
+async def password(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data_store[update.effective_chat.id]["password"] = update.message.text
     await update.message.reply_text("Masukkan harga akun:")
     return HARGA
 
-async def harga(update: Update, context):
+async def harga(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if not text.isdigit():
         await update.message.reply_text("Harga harus berupa angka.")
@@ -71,12 +76,12 @@ async def harga(update: Update, context):
     await update.message.reply_text("Masukkan tanggal beli (format: DD-MM-YYYY):")
     return TANGGAL_BELI
 
-async def tanggal_beli(update: Update, context):
+async def tanggal_beli(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data_store[update.effective_chat.id]["tanggal_beli"] = update.message.text
     await update.message.reply_text("Masukkan tanggal backfree (format: DD-MM-YYYY):")
     return TANGGAL_BACKFREE
 
-async def tanggal_backfree(update: Update, context):
+async def tanggal_backfree(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         tgl_beli = datetime.strptime(user_data_store[update.effective_chat.id]["tanggal_beli"], "%d-%m-%Y")
         tgl_refund = datetime.strptime(update.message.text, "%d-%m-%Y")
@@ -91,7 +96,7 @@ async def tanggal_backfree(update: Update, context):
     await update.message.reply_text("Masukkan durasi akun (dalam hari):")
     return DURASI_HARI
 
-async def durasi(update: Update, context):
+async def durasi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         durasi_input = int(update.message.text)
     except ValueError:
@@ -99,7 +104,6 @@ async def durasi(update: Update, context):
         return DURASI_HARI
 
     harga = user_data_store[update.effective_chat.id]["harga"]
-
     if (harga == 12000 and durasi_input != 30) or (harga == 15000 and durasi_input != 60) or (harga == 18000 and durasi_input != 90):
         await update.message.reply_text(f"Durasi harus sesuai dengan harga {harga}.")
         return DURASI_HARI
@@ -108,7 +112,7 @@ async def durasi(update: Update, context):
     await update.message.reply_text("Masukkan jumlah klaim garansi:")
     return KLAIM
 
-async def klaim(update: Update, context):
+async def klaim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if not text.isdigit():
         await update.message.reply_text("Jumlah klaim harus berupa angka.")
@@ -116,13 +120,10 @@ async def klaim(update: Update, context):
 
     user_data_store[update.effective_chat.id]["klaim"] = int(text)
     keyboard = [["DANA", "OVO", "GoPay", "ShopeePay"]]
-    await update.message.reply_text(
-        "Pilih e-wallet untuk refund:",
-        reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
-    )
+    await update.message.reply_text("Pilih e-wallet untuk refund:", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
     return E_WALLET
 
-async def ewallet(update: Update, context):
+async def ewallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pilihan = ["DANA", "OVO", "GoPay", "ShopeePay"]
     text = update.message.text
     if text not in pilihan:
@@ -133,7 +134,7 @@ async def ewallet(update: Update, context):
     await update.message.reply_text("Masukkan nomor e-wallet:")
     return NO_EWALLET
 
-async def no_ewallet(update: Update, context):
+async def no_ewallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     no = update.message.text
     if not no.isdigit() or not no.startswith("08"):
         await update.message.reply_text("Nomor e-wallet harus berupa angka dan dimulai dengan '08'.")
@@ -160,7 +161,7 @@ Ketik 'ya' untuk lanjut atau 'tidak' untuk membatalkan.
     await update.message.reply_text(ringkasan)
     return KONFIRMASI
 
-async def konfirmasi(update: Update, context):
+async def konfirmasi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text.lower() != "ya":
         await update.message.reply_text("Dibatalkan.")
         return ConversationHandler.END
@@ -206,19 +207,16 @@ E-Wallet: {data["e_wallet"]} - {data["no_ewallet"]}
     await update.message.reply_text("Apakah Anda ingin mengajukan refund lain?", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
     return LANJUT
 
-async def lanjut(update: Update, context):
+async def lanjut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text.lower() == "ya":
         await update.message.reply_text("Masukkan nama Anda:")
         return NAMA
     else:
-        await update.message.reply_text("Terima kasih!")
+        await update.message.reply_text("Terima kasih sudah mengajukan refund, harap menunggu sampai dana masuk ke rekeningmu ya!")
         return ConversationHandler.END
 
-def main():
-    # Create Application object
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    # Setup conversation handler
+def run_telegram_bot():
+    app_bot = ApplicationBuilder().token(BOT_TOKEN).build()
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -237,23 +235,9 @@ def main():
         },
         fallbacks=[CommandHandler("start", start)],
     )
-
-    # Add the conversation handler to the app
-    app.add_handler(conv_handler)
-
-    # Keep alive Flask (only needed if you're using Flask)
-    keep_alive()
-
-    # Run both Flask and Telegram bot in parallel
-    def run_flask():
-        app.run(host='0.0.0.0', port=2597)
-
-    # Run Flask in a separate thread
-    thread = Thread(target=run_flask)
-    thread.start()
-
-    # Run Telegram bot polling
-    app.run_polling()  # This line starts the bot and listens for incoming messages
+    app_bot.add_handler(conv_handler)
+    asyncio.run(app_bot.run_polling())
 
 if __name__ == '__main__':
-    main()
+    Thread(target=run_telegram_bot).start()
+    app.run(host='0.0.0.0', port=2597)
