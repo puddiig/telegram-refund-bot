@@ -10,12 +10,13 @@ from datetime import datetime
 from flask import Flask
 from threading import Thread
 import asyncio
+import os
+import json
 
 # Konfigurasi logging
 logging.basicConfig(level=logging.INFO)
 
 # Token dan Spreadsheet
-import os
 BOT_TOKEN = os.environ['TOKEN']
 SPREADSHEET_ID = '1tdPwCEKg_QqApq6nlyG5VjKqmJ8VKWOeH0rEfVoN7fg'
 ADMIN_ID = 8005266733  # Telegram Admin
@@ -27,7 +28,10 @@ scope = [
     "https://www.googleapis.com/auth/drive.file",
     "https://www.googleapis.com/auth/drive"
 ]
-creds = ServiceAccountCredentials.from_json_keyfile_name('olaa-refund-f5d486f2dc3a.json', scope)
+
+# Mengambil kredensial dari environment variable (lebih aman di Railway)
+creds_dict = json.loads(os.environ['GOOGLE_CREDENTIALS_JSON'])
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
@@ -74,12 +78,12 @@ async def harga(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return HARGA
 
     user_data_store[update.effective_chat.id]["harga"] = harga
-    await update.message.reply_text("Masukkan tanggal beli (format: DD-MM-YYYY):")
+    await update.message.reply_text("Masukkan tanggal beli (contoh: 12-04-2025):")
     return TANGGAL_BELI
 
 async def tanggal_beli(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data_store[update.effective_chat.id]["tanggal_beli"] = update.message.text
-    await update.message.reply_text("Masukkan tanggal backfree (format: DD-MM-YYYY):")
+    await update.message.reply_text("Masukkan tanggal backfree (contoh: 13-04-2025):")
     return TANGGAL_BACKFREE
 
 async def tanggal_backfree(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -194,7 +198,9 @@ async def konfirmasi(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["e_wallet"], data["no_ewallet"],
             datetime.now().strftime("%d-%m-%Y %H:%M:%S")
         ])
+        logging.info(f"Data refund berhasil disimpan untuk {data['nama']}")
     except Exception as e:
+        logging.error(f"Gagal menyimpan data refund: {e}")
         await update.message.reply_text(f"Terjadi kesalahan saat menyimpan data: {e}")
         return ConversationHandler.END
 
@@ -241,7 +247,10 @@ def run_telegram_bot():
         fallbacks=[CommandHandler("start", start)],
     )
     app_bot.add_handler(conv_handler)
-    asyncio.run(app_bot.run_polling())
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(app_bot.run_polling())
 
 if __name__ == '__main__':
     Thread(target=run_telegram_bot).start()
