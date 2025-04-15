@@ -15,7 +15,8 @@ import asyncio
 logging.basicConfig(level=logging.INFO)
 
 # Token dan Spreadsheet
-BOT_TOKEN = '7596288746:AAFOAXx2OOKvXgE8PzcfjgaqdTJ_lAiJDFo'
+import os
+BOT_TOKEN = 'os.environ['TOKEN']'
 SPREADSHEET_ID = '1tdPwCEKg_QqApq6nlyG5VjKqmJ8VKWOeH0rEfVoN7fg'
 ADMIN_ID = 8005266733  # Telegram Admin
 
