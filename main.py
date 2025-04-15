@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 
 # Token dan Spreadsheet
 import os
-BOT_TOKEN = 'os.environ['TOKEN']'
+BOT_TOKEN = os.environ['TOKEN']
 SPREADSHEET_ID = '1tdPwCEKg_QqApq6nlyG5VjKqmJ8VKWOeH0rEfVoN7fg'
 ADMIN_ID = 8005266733  # Telegram Admin
 
@@ -245,4 +245,4 @@ def run_telegram_bot():
 
 if __name__ == '__main__':
     Thread(target=run_telegram_bot).start()
-    app.run(host='0.0.0.0', port=2597)
+    app.run(host='0.0.0.0', port=8080)
